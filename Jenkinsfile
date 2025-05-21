@@ -3,17 +3,14 @@ pipeline {
 
     environment {
         AWS_REGION = 'ap-northeast-2'
-        ECR_REPO = 'test/test-api'
-        IMAGE_TAG = "${env.BUILD_ID}" 
-        ACCOUNT_ID = "521199095756"
-        ECR_BASE_URI = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-        ECR_URI = "${ECR_BASE_URI}/${ECR_REPO}"
+        ECR_REPO = '521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/test/test-api'
+        IMAGE_TAG = "jenkins-${env.BUILD_NUMBER}"
     }
 
     stages {
-        stage('Clone from GitHub') {
+        stage('Checkout SCM') {
             steps {
-                git branch: 'main', credentialsId: 'github-credentials', url: 'https://github.com/kara10041/WebGoat.git'
+                checkout scm
             }
         }
 
@@ -25,41 +22,30 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                docker build -t webgoat-image .
-                docker tag webgoat-image $ECR_URI:$IMAGE_TAG
-                '''
+                sh "docker build -t $ECR_REPO:$IMAGE_TAG ."
             }
         }
 
         stage('Login to ECR') {
             steps {
-                withCredentials([[ 
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-ecr-credentials'
-                ]]) {
-                    sh '''
-                    aws ecr get-login-password --region $AWS_REGION | \
-                      docker login --username AWS --password-stdin $ECR_BASE_URI
-                    '''
-                }
+                sh "aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO"
             }
         }
 
         stage('Push to ECR') {
             steps {
-                sh 'docker push $ECR_URI:$IMAGE_TAG'
+                sh "docker push $ECR_REPO:$IMAGE_TAG"
             }
         }
 
-        stage('Deploy to ECS') {
+        stage('Update ECS Service') {
             steps {
                 sh '''
-                aws ecs update-service \
-                  --cluster webgoat-cluster \
-                  --service webgoat-service \
-                  --force-new-deployment \
-                  --region $AWS_REGION
+                    aws ecs update-service \
+                        --cluster webgoat-cluster \
+                        --service webgoat-service \
+                        --force-new-deployment \
+                        --region ap-northeast-2
                 '''
             }
         }
