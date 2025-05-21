@@ -13,7 +13,7 @@ pipeline {
     stages {
         stage('Clone from GitHub') {
             steps {
-                git branch: 'main', credentialsId: 'github-credentials', url: 'https://github.com/kara10041/WebGoat.git'
+                git branch: 'develop', credentialsId: 'github-credentials', url: 'https://github.com/kara10041/WebGoat.git'
             }
         }
 
