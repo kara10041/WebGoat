@@ -39,7 +39,7 @@ pipeline {
                         aws configure set region $AWS_REGION
 
                         aws ecr get-login-password --region $AWS_REGION | \
-                        docker login --username AWS --password-stdin 521199095756.dkr.ecr.ap-northeast-2.amazonaws.com
+                        docker login --username AWS --password-stdin $ECR_REPO
                     '''
                 }
             }
