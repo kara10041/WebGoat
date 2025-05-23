@@ -2,13 +2,13 @@ pipeline {
     agent any
 
     environment {
-        ECR_REPO = "159773342061.dkr.ecr.ap-northeast-2.amazonaws.com/jenkins-demo"
+        ECR_REPO = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/ecr-webgoat" 
         IMAGE_TAG = "latest"
-        JAVA_HOME = "/opt/jdk-17" 
+        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto.x86_64"
         PATH = "${env.JAVA_HOME}/bin:${env.PATH}"
-        S3_BUCKET = "webgoat-deploy-bucket"
-        DEPLOY_APP = "webgoat-cd-app"
-        DEPLOY_GROUP = "webgoat-deployment-group"
+        S3_BUCKET = "webgoat-bucket0225"
+        DEPLOY_APP = "webgoat-app2"
+        DEPLOY_GROUP = "webgoat-bluegreen"
         REGION = "ap-northeast-2"
         BUNDLE = "webgoat-deploy-bundle.zip"
     }
@@ -28,7 +28,9 @@ pipeline {
 
         stage('🐳 Docker Build') {
             steps {
-                sh 'docker build -t $ECR_REPO:$IMAGE_TAG .'
+                sh '''
+                docker build -t $ECR_REPO:$IMAGE_TAG .
+                '''
             }
         }
 
@@ -72,7 +74,7 @@ pipeline {
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
   "memory": "512",
-  "executionRoleArn": "arn:aws:iam::159773342061:role/ecsTaskExecutionRole"
+  "executionRoleArn": "arn:aws:iam::590715976556:role/ecsTaskExecutionRole"
 }"""
                     writeFile file: 'taskdef.json', text: taskdef
                 }
@@ -110,18 +112,16 @@ Resources:
 
         stage('🚀 Deploy via CodeDeploy') {
             steps {
-                withAWS(credentials: 'aws-ecr-credentials', region: "${REGION}") {
-                    sh '''
-                    aws s3 cp $BUNDLE s3://$S3_BUCKET/$BUNDLE --region $REGION
+                sh '''
+                aws s3 cp $BUNDLE s3://$S3_BUCKET/$BUNDLE --region $REGION
 
-                    aws deploy create-deployment \
-                      --application-name $DEPLOY_APP \
-                      --deployment-group-name $DEPLOY_GROUP \
-                      --deployment-config-name CodeDeployDefault.ECSAllAtOnce \
-                      --s3-location bucket=$S3_BUCKET,bundleType=zip,key=$BUNDLE \
-                      --region $REGION
-                    '''
-                }
+                aws deploy create-deployment \
+                  --application-name $DEPLOY_APP \
+                  --deployment-group-name $DEPLOY_GROUP \
+                  --deployment-config-name CodeDeployDefault.ECSAllAtOnce \
+                  --s3-location bucket=$S3_BUCKET,bundleType=zip,key=$BUNDLE \
+                  --region $REGION
+                '''
             }
         }
     }
