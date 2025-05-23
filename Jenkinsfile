@@ -28,20 +28,11 @@ pipeline {
 
         stage('Login to AWS ECR') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'aws-ecr-credentials', // Jenkins에 등록된 AWS IAM 자격증명 ID
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )]) {
+                withAWS(credentials: 'aws-ecr-credentials', region: "${AWS_REGION}") {
                     sh '''
-                            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                            export AWS_REGION=$AWS_REGION
-
-                            aws ecr get-login-password --region $AWS_REGION | \
-                            docker login --username AWS --password-stdin $ECR_REPO
-                        '''
-
+                        aws ecr get-login-password --region $AWS_REGION | \
+                        docker login --username AWS --password-stdin $ECR_REPO
+                    '''
                 }
             }
         }
