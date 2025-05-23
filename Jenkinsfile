@@ -3,86 +3,61 @@ pipeline {
 
     environment {
         AWS_REGION = 'ap-northeast-2'
-        ECR_REPO = 'test/test-api'
-        IMAGE_TAG = "${env.BUILD_ID}" 
-        ACCOUNT_ID = "521199095756"
-        ECR_BASE_URI = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-        ECR_URI = "${ECR_BASE_URI}/${ECR_REPO}"
+        ECR_REPO = '521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/ecr-webgoat'
+        IMAGE_TAG = 'latest'
     }
 
     stages {
-        stage('Clone from GitHub') {
+        stage('Checkout') {
             steps {
-                git branch: 'main', credentialsId: 'github-credentials', url: 'https://github.com/kara10041/WebGoat.git'
+                checkout scm
             }
         }
 
-  
+        stage('Maven Build') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t webgoat-image . '
-                sh 'docker tag webgoat-image ${ECR_URI}:${IMAGE_TAG}'
+                sh 'docker build -t $ECR_REPO:$IMAGE_TAG .'
             }
         }
 
-        stage('Login to ECR') {
+        stage('Login to AWS ECR') {
             steps {
-                withCredentials([[ 
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-ecr-credentials'
-                ]]) {
-                    sh 'aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URI'
+                withCredentials([usernamePassword(
+                    credentialsId: 'aws-ecr-credentials', // Jenkins에 등록된 AWS IAM 자격증명 ID
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
+                    sh '''
+                        aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+                        aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+                        aws configure set region $AWS_REGION
+
+                        aws ecr get-login-password --region $AWS_REGION | \
+                        docker login --username AWS --password-stdin 521199095756.dkr.ecr.ap-northeast-2.amazonaws.com
+                    '''
                 }
             }
         }
 
         stage('Push to ECR') {
             steps {
-                sh 'docker push ${ECR_URI}:${IMAGE_TAG}'
+                sh 'docker push $ECR_REPO:$IMAGE_TAG'
             }
         }
+    }
 
-        stage('Deploy to ECS via CodeDeploy') {
-            steps {
-                withCredentials([[ 
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-ecr-credentials'
-                ]]) {
-                    script {
-                        def appspecContent = '''\
-        version: 1
-        Resources:
-          - TargetService:
-              Type: AWS::ECS::Service
-              Properties:
-                TaskDefinition: webgoat-task1
-                LoadBalancerInfo:
-                  ContainerName: webgoat
-                  ContainerPort: 8080
-                PlatformVersion: "LATEST"
-        '''
-                        writeFile file: 'appspec.yaml', text: appspecContent
-                    }
-
-                    sh '''
-        echo "==== appspec.yaml 출력 ===="
-        cat appspec.yaml
-        echo "==========================="
-        '''
-
-                    sh 'aws s3 cp appspec.yaml s3://webgoat-codedeploy-bucket/appspec.yaml'
-
-                    sh '''
-        aws deploy create-deployment \
-          --application-name webgoat-codedeploy \
-          --deployment-group-name webgoat-deploy-group \
-          --deployment-config-name CodeDeployDefault.ECSAllAtOnce \
-          --region ap-northeast-2 \
-          --revision "revisionType=S3,s3Location={bucket=webgoat-codedeploy-bucket,key=appspec.yaml,bundleType=YAML}"
-        '''
-                }
-            }
+    post {
+        success {
+            echo "✅ ECR에 Docker 이미지가 성공적으로 푸시되었습니다!"
         }
-
+        failure {
+            echo "❌ ECR 푸시에 실패했습니다. 로그를 확인하세요."
+        }
     }
 }
