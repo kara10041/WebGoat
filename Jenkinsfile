@@ -74,7 +74,7 @@ pipeline {
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "256",
   "memory": "512",
-  "executionRoleArn": "arn:aws:iam::590715976556:role/ecsTaskExecutionRole"
+  "executionRoleArn": "arn:aws:iam::521199095756:role/ecsTaskExecutionRole"
 }"""
                     writeFile file: 'taskdef.json', text: taskdef
                 }
