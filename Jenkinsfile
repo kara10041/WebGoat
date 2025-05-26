@@ -33,20 +33,21 @@ pipeline {
             }
         }
 
-        stage('🔍 Snyk CLI Scan') {
-    steps {
-        withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-            sh '''
-            docker run --rm \
-              -e SNYK_TOKEN=$SNYK_TOKEN \
-                -v $WORKSPACE:/project \
-                -w /project \
-              snyk-java-cli \
-              test --file=pom.xml --project-name=WebGoat
-            '''
+        stage('🔍 Snyk Dependency Scan') {
+            steps {
+                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                    sh '''
+                    docker run --rm \
+                      -e SNYK_TOKEN=$SNYK_TOKEN \
+                      -v $WORKSPACE:/project \
+                      -w /project \
+                      snyk-java-cli \
+                      test --scan-unmanaged --file=pom.xml --project-name=WebGoat
+                    '''
+                }
+            }
         }
-    }
-}
+
 
                 
         stage('🐳 Docker Build & Tag') {
