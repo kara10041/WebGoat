@@ -24,17 +24,20 @@ pipeline {
             }
         }
 
+
         stage('🔍 Snyk Dependency Scan (Plugin)') {
-            steps {
-                snykSecurity(
-                    snykInstallation: 'snyk-default',  
-                    snykTokenId: 'snyk-token',
-                    targetFile: 'pom.xml',
-                    failOnIssues: true
-                )
-            }
+    steps {
+        withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+            snykSecurity(
+                snykInstallation: 'snyk-default',
+                snykTokenId: 'SNYK_TOKEN',     
+                targetFile: 'pom.xml',
+                failOnIssues: true
+            )
         }
-        
+    }
+}
+
 
         stage('🐳 Docker Build & Tag') {
             steps {
