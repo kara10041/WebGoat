@@ -2,15 +2,15 @@ pipeline {
     agent any
 
     environment {
-        ECR_REPO = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/ecr-webgoat"
-        IMAGE_TAG = "latest"
-        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto.x86_64"
-        PATH = "${env.JAVA_HOME}/bin:${env.PATH}"
-        S3_BUCKET = "webgoat-bucket0225"
-        DEPLOY_APP = "webgoat-app2"
+        ECR_REPO     = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/ecr-webgoat"
+        IMAGE_TAG    = "latest"
+        JAVA_HOME    = "/usr/lib/jvm/java-17-amazon-corretto.x86_64"
+        PATH         = "${env.JAVA_HOME}/bin:${env.PATH}"
+        S3_BUCKET    = "webgoat-bucket0225"
+        DEPLOY_APP   = "webgoat-app2"
         DEPLOY_GROUP = "webgoat-bluegreen"
-        REGION = "ap-northeast-2"
-        BUNDLE = "webgoat-deploy-bundle.zip"
+        REGION       = "ap-northeast-2"
+        BUNDLE       = "webgoat-deploy-bundle.zip"
     }
 
     stages {
@@ -26,13 +26,14 @@ pipeline {
             }
         }
 
-        ✅ Snyk Auth + Code Test
         stage('🔍 Snyk Code Scan') {
             steps {
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     sh '''
-                    snyk auth $SNYK_TOKEN
-                    snyk test || true
+                    docker run --rm \
+                      -e SNYK_TOKEN=$SNYK_TOKEN \
+                      -v $(pwd):/project \
+                      snyk/snyk-cli:docker snyk test --all-projects
                     '''
                 }
             }
@@ -46,13 +47,13 @@ pipeline {
             }
         }
 
-        ✅ Snyk Docker Scan
         stage('🔎 Snyk Container Scan') {
             steps {
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     sh '''
-                    snyk auth $SNYK_TOKEN
-                    snyk container test $ECR_REPO:$IMAGE_TAG || true
+                    docker run --rm \
+                      -e SNYK_TOKEN=$SNYK_TOKEN \
+                      snyk/snyk-cli:docker snyk container test $ECR_REPO:$IMAGE_TAG
                     '''
                 }
             }
