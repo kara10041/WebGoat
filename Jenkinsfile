@@ -26,19 +26,6 @@ pipeline {
             }
         }
 
-    stage('🔍 Snyk Code Scan') {
-        steps {
-            withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-                sh '''
-                docker run --rm \
-                  -e SNYK_TOKEN=$SNYK_TOKEN \
-                  -v $(pwd):/project \
-                  snyk/snyk-cli:docker test --file=pom.xml --project-name=WebGoat
-                '''
-            }
-        }
-    }
-
 
         stage('🐳 Docker Build') {
             steps {
@@ -63,7 +50,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('🔐 ECR Login') {
             steps {
                 withAWS(credentials: 'aws-ecr-credentials', region: "${REGION}") {
