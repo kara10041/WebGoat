@@ -25,23 +25,29 @@ pipeline {
         }
         
         
-        stage('🔍 Snyk CLI Scan') {
+         stage('🔧 Build Snyk CLI Image') {
             steps {
-                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-                    sh '''
-                    docker run --rm \
-                      -e SNYK_TOKEN=$SNYK_TOKEN \
-                      -v $WORKSPACE:/project \
-                      snyk/snyk-cli:docker test \
-                      --file=pom.xml \
-                      --project-name=WebGoat
-                    '''
+                dir('snyk-docker') {
+                    sh 'docker build -t snyk-java-cli .'
                 }
             }
         }
-        
-                
 
+        stage('🔍 Snyk CLI Scan') {
+    steps {
+        withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+            sh '''
+            docker run --rm \
+              -e SNYK_TOKEN=$SNYK_TOKEN \
+              -v $WORKSPACE:/project \
+              snyk-java-cli \
+              test --file=pom.xml --project-name=WebGoat
+            '''
+        }
+    }
+}
+
+                
         stage('🐳 Docker Build & Tag') {
             steps {
                 sh '''
