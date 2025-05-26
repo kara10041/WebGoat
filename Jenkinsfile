@@ -33,7 +33,7 @@ pipeline {
                     docker run --rm \
                       -e SNYK_TOKEN=$SNYK_TOKEN \
                       -v $(pwd):/project \
-                      snyk/snyk-cli:docker test --all-projects
+                      snyk/snyk-cli:docker test -file=pom.xml --project-name=WebGoat
                     '''
                 }
             }
