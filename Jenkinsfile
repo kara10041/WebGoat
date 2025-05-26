@@ -4,8 +4,6 @@ pipeline {
     environment {
         ECR_REPO     = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/ecr-webgoat"
         IMAGE_TAG    = "latest"
-        JAVA_HOME    = "/usr/lib/jvm/java-17-amazon-corretto.x86_64"
-        PATH         = "${env.JAVA_HOME}/bin:${env.PATH}"
         S3_BUCKET    = "webgoat-bucket0225"
         DEPLOY_APP   = "webgoat-app2"
         DEPLOY_GROUP = "webgoat-bluegreen"
@@ -20,14 +18,19 @@ pipeline {
             }
         }
 
-        stage('🔨 Build JAR') {
+        stage('⚙️ Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh './mvnw clean install -DskipTests'
             }
         }
 
+        stage('🔍 Snyk Dependency Scan (Plugin)') {
+            steps {
+                snykSecurity failOnIssues: true, snykTokenId: 'snyk-token', targetFile: 'pom.xml'
+            }
+        }
 
-        stage('🐳 Docker Build') {
+        stage('🐳 Docker Build & Tag') {
             steps {
                 sh '''
                 docker build -t $ECR_REPO:$IMAGE_TAG .
@@ -35,24 +38,18 @@ pipeline {
             }
         }
 
-        stage('🔍 Snyk Code Scan') {
+        stage('🔍 Snyk Image Scan (Docker CLI)') {
             steps {
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     sh '''
                     docker run --rm \
                       -e SNYK_TOKEN=$SNYK_TOKEN \
-                      -e JAVA_HOME=/usr/lib/jvm/java-11-openjdk \
-                      -v $(pwd):/project \
-                      -w /project \
-                      --entrypoint snyk \
-                      snyk/snyk-cli:docker test \
-                      --file=pom.xml \
-                      --project-name=WebGoat
+                      snyk/snyk-cli:docker test $ECR_REPO:$IMAGE_TAG
                     '''
                 }
             }
         }
-
+        
         stage('🔐 ECR Login') {
             steps {
                 withAWS(credentials: 'aws-ecr-credentials', region: "${REGION}") {
