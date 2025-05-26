@@ -30,7 +30,7 @@ pipeline {
         withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
             snykSecurity(
                 snykInstallation: 'snyk-default',
-                snykTokenId: 'SNYK_TOKEN',     
+                snykTokenId: 'snyk-token'    
                 targetFile: 'pom.xml',
                 failOnIssues: true
             )
