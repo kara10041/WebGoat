@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        ECR_REPO = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/ecr-webgoat" 
+        ECR_REPO = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/ecr-webgoat"
         IMAGE_TAG = "latest"
         JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto.x86_64"
         PATH = "${env.JAVA_HOME}/bin:${env.PATH}"
@@ -26,11 +26,35 @@ pipeline {
             }
         }
 
+        ✅ Snyk Auth + Code Test
+        stage('🔍 Snyk Code Scan') {
+            steps {
+                withCredentials([string(credentialsId: 'snyk-api-token', variable: 'SNYK_TOKEN')]) {
+                    sh '''
+                    snyk auth $SNYK_TOKEN
+                    snyk test || true
+                    '''
+                }
+            }
+        }
+
         stage('🐳 Docker Build') {
             steps {
                 sh '''
                 docker build -t $ECR_REPO:$IMAGE_TAG .
                 '''
+            }
+        }
+
+        ✅ Snyk Docker Scan
+        stage('🔎 Snyk Container Scan') {
+            steps {
+                withCredentials([string(credentialsId: 'snyk-api-token', variable: 'SNYK_TOKEN')]) {
+                    sh '''
+                    snyk auth $SNYK_TOKEN
+                    snyk container test $ECR_REPO:$IMAGE_TAG || true
+                    '''
+                }
             }
         }
 
@@ -128,11 +152,10 @@ Resources:
 
     post {
         success {
-            echo "✅ Successfully built, pushed, and deployed!"
+            echo "✅ Successfully built, scanned, pushed, and deployed!"
         }
         failure {
             echo "❌ Build or deployment failed. Check logs!"
         }
     }
 }
-
