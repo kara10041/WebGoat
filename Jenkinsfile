@@ -25,17 +25,22 @@ pipeline {
         }
         
         
-        stage('🔍 Snyk Dependency Scan (Plugin)') {
+        stage('🔍 Snyk CLI Scan') {
             steps {
-                snykSecurity(
-                    snykInstallation: 'snyk-default',
-                    snykTokenId: 'snyk-token',
-                    targetFile: 'pom.xml',
-                    failOnIssues: true
-                )
+                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                    sh '''
+                    docker run --rm \
+                      -e SNYK_TOKEN=$SNYK_TOKEN \
+                      -v $WORKSPACE:/project \
+                      snyk/snyk-cli:docker test \
+                      --file=pom.xml \
+                      --project-name=WebGoat
+                    '''
+                }
             }
         }
         
+                
 
         stage('🐳 Docker Build & Tag') {
             steps {
