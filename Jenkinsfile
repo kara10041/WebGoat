@@ -41,6 +41,7 @@ pipeline {
                     sh '''
                     docker run --rm \
                       -e SNYK_TOKEN=$SNYK_TOKEN \
+                      -e JAVA_HOME=/usr/lib/jvm/java-11-openjdk \
                       -v $(pwd):/project \
                       -w /project \
                       --entrypoint snyk \
