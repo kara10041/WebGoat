@@ -29,7 +29,7 @@ pipeline {
         ✅ Snyk Auth + Code Test
         stage('🔍 Snyk Code Scan') {
             steps {
-                withCredentials([string(credentialsId: 'snyk-api-token', variable: 'SNYK_TOKEN')]) {
+                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     sh '''
                     snyk auth $SNYK_TOKEN
                     snyk test || true
@@ -49,7 +49,7 @@ pipeline {
         ✅ Snyk Docker Scan
         stage('🔎 Snyk Container Scan') {
             steps {
-                withCredentials([string(credentialsId: 'snyk-api-token', variable: 'SNYK_TOKEN')]) {
+                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     sh '''
                     snyk auth $SNYK_TOKEN
                     snyk container test $ECR_REPO:$IMAGE_TAG || true
