@@ -39,7 +39,8 @@ pipeline {
             sh '''
             docker run --rm \
               -e SNYK_TOKEN=$SNYK_TOKEN \
-              -v $WORKSPACE:/project \
+                -v $WORKSPACE:/project \
+                -w /project \
               snyk-java-cli \
               test --file=pom.xml --project-name=WebGoat
             '''
