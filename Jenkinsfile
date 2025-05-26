@@ -23,21 +23,19 @@ pipeline {
                 sh './mvnw clean install -DskipTests -Dexec.skip=true'
             }
         }
-
-
+        
+        
         stage('🔍 Snyk Dependency Scan (Plugin)') {
-    steps {
-        withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-            snykSecurity(
-                snykInstallation: 'snyk-default',
-                snykTokenId: 'snyk-token'    
-                targetFile: 'pom.xml',
-                failOnIssues: true
-            )
+            steps {
+                snykSecurity(
+                    snykInstallation: 'snyk-default',
+                    snykTokenId: 'snyk-token',
+                    targetFile: 'pom.xml',
+                    failOnIssues: true
+                )
+            }
         }
-    }
-}
-
+        
 
         stage('🐳 Docker Build & Tag') {
             steps {
