@@ -26,9 +26,15 @@ pipeline {
 
         stage('🔍 Snyk Dependency Scan (Plugin)') {
             steps {
-                snykSecurity failOnIssues: true, snykTokenId: 'snyk-token', targetFile: 'pom.xml'
+                snykSecurity(
+                    snykInstallation: 'snyk-default',  
+                    snykTokenId: 'snyk-token',
+                    targetFile: 'pom.xml',
+                    failOnIssues: true
+                )
             }
         }
+        
 
         stage('🐳 Docker Build & Tag') {
             steps {
