@@ -11,6 +11,7 @@ pipeline {
         DEPLOY_GROUP = "webgoat-bluegreen"
         REGION = "ap-northeast-2"
         BUNDLE = "webgoat-deploy-bundle.zip"
+        NVD_API_KEY = credentials('nvd-api-key')
     }
 
     stages {
@@ -39,6 +40,7 @@ pipeline {
                 docker run --rm \
                   -u 1000:1000 \
                   -v $PWD:/src \
+                  -e NVD_API_KEY=$NVD_API_KEY \
                   owasp/dependency-check:latest \
                   --scan /src/src/main/java \
                   --format HTML \
@@ -52,6 +54,21 @@ pipeline {
             }
         }
 
+        stage('🧪 디버깅: 리포트 디렉토리/파일 존재 여부') {
+        steps {
+            sh '''
+            docker run --rm -v $PWD:/src ubuntu \
+            bash -c "
+            echo '[📂 /src 폴더 리스트]';
+            ls -l /src;
+            echo '[📂 /src/dependency-check-report 디렉토리 리스트]';
+            ls -l /src/dependency-check-report || echo '[❌ 디렉토리 없음]';
+            "
+            '''
+        }
+    }
+
+        
         stage('🔨 Build JAR') {
             steps {
                 sh 'mvn clean package -DskipTests'
