@@ -37,16 +37,17 @@ pipeline {
                 mkdir -p dependency-check-report
         
                 docker run --rm \
-                  -u $(id -u):$(id -g) \
+                  -u 1000:1000 \
                   -v $PWD:/src \
                   owasp/dependency-check:latest \
-                  --scan /src \
+                  --scan /src/src/main/java \
                   --format HTML \
                   --out /src/dependency-check-report \
                   --exclude .mvn \
                   --exclude .git \
                   --exclude target \
-                  --disableCentral
+                  --disableCentral \
+                  --log level debug
                 '''
             }
         }
