@@ -152,7 +152,7 @@ Resources:
                 ])
             }
         }
-
+    }
 
     post {
         success {
@@ -163,4 +163,4 @@ Resources:
         }
     }
 }
-}
+
