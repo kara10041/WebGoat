@@ -54,15 +54,14 @@ pipeline {
             steps {
                 sh '''
                     echo "[🔍 Dependency Check 실행 시작]"
-                    ./dependency-check/bin/dependency-check.sh \
-                        --project WebGoat \
-                        --scan ./src/main/java \
-                        --format HTML \
-                        --out ./dependency-check-report \
-                        --prettyPrint \
-                        --disableAssembly \
-                        --failOnCVSS 7 \
-                        --nvdApiKey $NVD_API_KEY
+                            NVD_API_KEY=$NVD_API_KEY ./dependency-check/bin/dependency-check.sh \
+                              --project WebGoat \
+                              --scan ./src/main/java \
+                              --format HTML \
+                              --out ./dependency-check-report \
+                              --prettyPrint \
+                              --disableAssembly \
+                              --failOnCVSS 7
                 '''
             }
         }
