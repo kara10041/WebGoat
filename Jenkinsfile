@@ -26,6 +26,7 @@ pipeline {
                 mkdir -p dependency-check-report
         
                 docker run --rm \
+                  -u $(id -u):$(id -g) \
                   -v $PWD:/src \
                   owasp/dependency-check:latest \
                   --scan /src \
