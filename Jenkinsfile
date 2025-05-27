@@ -43,9 +43,10 @@ pipeline {
                       bash -c \"
                         mkdir -p /src/dependency-check-report &&
                         dependency-check.sh \
-                          --scan /src/src/main/java \
+                          --scan /src/main/java \
                           --format HTML \
                           --out /src/dependency-check-report \
+                          --project WebGoat \
                           --exclude .mvn \
                           --exclude .git \
                           --exclude target \
