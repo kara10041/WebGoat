@@ -34,25 +34,26 @@ pipeline {
 
         stage('🔍 Dependency Check') {
             steps {
-                sh '''
+                sh """
                 mkdir -p dependency-check-report
         
-                docker run --rm \
-                  -u 1000:1000 \
-                  -v $PWD:/src \
-                  -e NVD_API_KEY=$NVD_API_KEY \
-                  owasp/dependency-check:latest \
-                  --scan /src/src/main/java \
-                  --format HTML \
-                  --out /src/dependency-check-report \
-                  --exclude .mvn \
-                  --exclude .git \
-                  --exclude target \
-                  --disableCentral \
+                docker run --rm \\
+                  -u 1000:1000 \\
+                  -v \$PWD:/src \\
+                  -e NVD_API_KEY=$NVD_API_KEY \\
+                  owasp/dependency-check:latest \\
+                  --scan /src/src/main/java \\
+                  --format HTML \\
+                  --out /src/dependency-check-report \\
+                  --exclude .mvn \\
+                  --exclude .git \\
+                  --exclude target \\
+                  --disableCentral \\
                   --log level debug
-                '''
+                """
             }
         }
+
 
         stage('🧪 디버깅: 리포트 디렉토리/파일 존재 여부') {
         steps {
