@@ -35,16 +35,20 @@ pipeline {
         stage('🔍 Dependency Check') {
             steps {
                 sh '''
-                    echo "[🔍 Dependency Check 시작]"
+                    echo "[🔍 Dependency Check 실행 시작]"
                     docker run --rm -u 1000:1000 \
                       -e NVD_API_KEY=$NVD_API_KEY \
                       -v $WORKSPACE:/src \
                       owasp/dependency-check:latest \
-                      bash -c "
+                      bash -c '
                         set -e
-                        echo '[👣 디렉토리 생성 중]'
-                        mkdir -p /src/dependency-check-report
-                        echo '[🚀 스캔 시작]'
+                        echo "[📁 /src/main/java 경로 확인]"
+                        ls -al /src/main/java || { echo "[❌ main/java 없음]"; exit 1; }
+        
+                        echo "[📂 dependency-check-report 디렉토리 생성]"
+                        mkdir -p /src/dependency-check-report || { echo "[❌ 디렉토리 생성 실패]"; exit 1; }
+        
+                        echo "[🚀 dependency-check.sh 실행]"
                         dependency-check.sh \
                           --scan /src/main/java \
                           --format HTML \
@@ -52,12 +56,14 @@ pipeline {
                           --project WebGoat \
                           --prettyPrint \
                           --disableCentral \
-                          --log level debug
-                        echo '[✅ Dependency Check 완료]'
-                      "
+                          --log level debug || { echo "[❌ dependency-check.sh 실패]"; exit 1; }
+        
+                        echo "[✅ Dependency Check 정상 종료]"
+                      '
                 '''
             }
         }
+
         
         stage('🧪 경로 점검: /src/main/java 존재 확인') {
             steps {
