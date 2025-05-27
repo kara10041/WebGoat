@@ -34,13 +34,12 @@ pipeline {
 
         stage('🔍 Dependency Check') {
             steps {
-                  sh """
-                  docker run --rm \
-                      -u 1000:1000 \
+                sh '''
+                    docker run --rm -u 1000:1000 \
                       -e NVD_API_KEY=$NVD_API_KEY \
-                      -v \$PWD:/src \
+                      -v $WORKSPACE:/src \
                       owasp/dependency-check:latest \
-                      bash -c \"
+                      bash -c "
                         mkdir -p /src/dependency-check-report &&
                         dependency-check.sh \
                           --scan /src/main/java \
@@ -51,9 +50,8 @@ pipeline {
                           --exclude .git \
                           --exclude target \
                           --disableCentral \
-                          --log level debug
-                  \"
-            """
+                          --log level debug"
+                '''
             }
         }
 
