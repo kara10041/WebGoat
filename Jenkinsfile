@@ -20,6 +20,17 @@ pipeline {
             }
         }
 
+    stage('🧪 디버깅: Docker 쓰기 권한 확인') {
+                steps {
+                    sh '''
+                    docker run --rm \
+                      -v $PWD:/src \
+                      ubuntu bash -c "touch /src/testfile && echo '[✅ SUCCESS]' || echo '[❌ FAIL]'"
+                    '''
+                }
+            }
+        
+
         stage('🔍 Dependency Check') {
             steps {
                 sh '''
