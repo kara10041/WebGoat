@@ -35,13 +35,16 @@ pipeline {
         stage('🔍 Dependency Check') {
             steps {
                 sh '''
-                    echo "[🛠 Dependency Check 실행 시작]"
+                    echo "[🔍 Dependency Check 시작]"
                     docker run --rm -u 1000:1000 \
                       -e NVD_API_KEY=$NVD_API_KEY \
                       -v $WORKSPACE:/src \
                       owasp/dependency-check:latest \
                       bash -c "
-                        mkdir -p /src/dependency-check-report &&
+                        set -e
+                        echo '[👣 디렉토리 생성 중]'
+                        mkdir -p /src/dependency-check-report
+                        echo '[🚀 스캔 시작]'
                         dependency-check.sh \
                           --scan /src/main/java \
                           --format HTML \
@@ -50,26 +53,36 @@ pipeline {
                           --prettyPrint \
                           --disableCentral \
                           --log level debug
+                        echo '[✅ Dependency Check 완료]'
                       "
-                    echo "[✅ Dependency Check 실행 완료]"
+                '''
+            }
+        }
+        
+        stage('🧪 경로 점검: /src/main/java 존재 확인') {
+            steps {
+                sh '''
+                    docker run --rm -v $WORKSPACE:/src ubuntu bash -c '
+                      echo "[📁 /src/main/java 확인]";
+                      ls -al /src/main/java || echo "[❌ main/java 없음]";
+                    '
+                '''
+            }
+        }
+        
+        stage('🧪 디버깅: 리포트 디렉토리/파일 존재 여부') {
+            steps {
+                sh '''
+                    docker run --rm -v $WORKSPACE:/src ubuntu bash -c '
+                      echo "[📂 /src 디렉토리 리스트]";
+                      ls -al /src;
+                      echo "[📂 /src/dependency-check-report 디렉토리 리스트]";
+                      ls -al /src/dependency-check-report || echo "[❌ 디렉토리 없음]";
+                    '
                 '''
             }
         }
 
-
-        stage('🧪 디버깅: Dependency Check 리포트 확인') {
-                    steps {
-                        sh '''
-                            echo "[📂 리포트 폴더 확인]"
-                            docker run --rm -v $WORKSPACE:/src ubuntu bash -c '
-                              echo "[/src 디렉토리 목록]";
-                              ls -al /src;
-                              echo "[/src/dependency-check-report 디렉토리 목록]";
-                              ls -al /src/dependency-check-report || echo "[❌ 리포트 디렉토리 없음]";
-                            '
-                        '''
-                    }
-                }
         
         stage('🔨 Build JAR') {
             steps {
