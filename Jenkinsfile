@@ -39,32 +39,39 @@ pipeline {
             }
         }
 
-        stage('📁 main/java 디렉토리 수도 생성') {
-            steps {
-                sh '''
-                    echo "[📁 /src/main/java 수도 생성 시작]"
-                    mkdir -p $WORKSPACE/src/main/java
-                    echo "// Dummy Java file for Dependency-Check" > $WORKSPACE/src/main/java/Dummy.java
-                    echo "[✅ /src/main/java 생성 완료]"
-                '''
-            }
-        }
 
-        stage('🔍 Dependency Check 실행') {
-            steps {
-                sh '''
-                    echo "[🔍 Dependency Check 실행 시작]"
-                            NVD_API_KEY=$NVD_API_KEY ./dependency-check/bin/dependency-check.sh \
-                              --project WebGoat \
-                              --scan ./src/main/java \
-                              --format HTML \
-                              --out ./dependency-check-report \
-                              --prettyPrint \
-                              --disableAssembly \
-                              --failOnCVSS 7
-                '''
-            }
-        }
+                    stage('🔍 Dependency Check (안전 실행)') {
+                        steps {
+                            writeFile file: 'run-depcheck.sh', text: '''#!/bin/bash
+                    set -e
+                    
+                    echo "[📂 실제 Java 소스 파일 개수 확인]"
+                    JAVA_COUNT=$(find ./src/main/java -type f -name "*.java" | wc -l)
+                    echo "[ℹ️ 총 Java 파일 개수: $JAVA_COUNT]"
+                    
+                    if [ "$JAVA_COUNT" -eq 0 ]; then
+                      echo "[⚠️ 경고: 분석할 .java 파일이 없습니다. Dependency-Check 실행 스킵]"
+                      exit 0
+                    fi
+                    
+                    echo "[✅ 파일 존재 확인 완료 - Dependency Check 실행 시작]"
+                    mkdir -p ./dependency-check-report
+                    
+                    ./dependency-check/bin/dependency-check.sh \
+                      --project WebGoat \
+                      --scan ./src/main/java \
+                      --format HTML \
+                      --out ./dependency-check-report \
+                      --prettyPrint \
+                      --disableAssembly \
+                      --failOnCVSS 7
+                    '''
+                    
+                            sh 'chmod +x run-depcheck.sh'
+                            sh './run-depcheck.sh'
+                        }
+                    }
+
 
         stage('📄 Publish Dependency Report') {
             steps {
