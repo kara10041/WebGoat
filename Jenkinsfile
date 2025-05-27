@@ -27,7 +27,7 @@ pipeline {
 
                 docker run --rm \
                   -v $PWD:/src \
-                  owasp/dependency-check:9.2.0 \
+                  owasp/dependency-check:latest \
                   --scan /src \
                   --format HTML \
                   --out /src/dependency-check-report
