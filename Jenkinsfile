@@ -31,6 +31,7 @@ pipeline {
                   --scan /src \
                   --format HTML \
                   --out /src/dependency-check-report
+                  --exclude .mvn --exclude .git --exclude target --disableCentral
                 '''
             }
         }
