@@ -143,13 +143,16 @@ Resources:
         stage('📑 Publish Dependency Report') {
             steps {
                 publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
                     reportDir: 'dependency-check-report',
                     reportFiles: 'dependency-check-report.html',
                     reportName: 'Dependency Check Report'
                 ])
             }
         }
-    }
+
 
     post {
         success {
