@@ -2,13 +2,15 @@ pipeline {
     agent any
 
     environment {
-        ECR_REPO     = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/ecr-webgoat"
-        IMAGE_TAG    = "latest"
-        S3_BUCKET    = "webgoat-bucket0225"
-        DEPLOY_APP   = "webgoat-app2"
+        ECR_REPO = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/ecr-webgoat" 
+        IMAGE_TAG = "latest"
+        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto.x86_64"
+        PATH = "${env.JAVA_HOME}/bin:${env.PATH}"
+        S3_BUCKET = "webgoat-bucket0225"
+        DEPLOY_APP = "webgoat-app2"
         DEPLOY_GROUP = "webgoat-bluegreen"
-        REGION       = "ap-northeast-2"
-        BUNDLE       = "webgoat-deploy-bundle.zip"
+        REGION = "ap-northeast-2"
+        BUNDLE = "webgoat-deploy-bundle.zip"
     }
 
     stages {
@@ -18,39 +20,28 @@ pipeline {
             }
         }
 
-        stage('⚙️ Build') {
+        stage('🔍 Dependency Check') {
             steps {
-                sh './mvnw clean install -DskipTests -Dexec.skip=true'
-            }
-        }
-        
-        
-         stage('🔧 Build Snyk CLI Image') {
-            steps {
-                dir('snyk-docker') {
-                    sh 'docker build -t snyk-java-cli .'
-                }
-            }
-        }
+                sh '''
+                mkdir -p dependency-check-report
 
-        stage('🔍 Snyk Dependency Scan') {
-            steps {
-                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-                    sh '''
-                    docker run --rm \
-                      -e SNYK_TOKEN=$SNYK_TOKEN \
-                      -v $WORKSPACE:/project \
-                      -w /project \
-                      snyk-java-cli \
-                      test --scan-unmanaged --file=pom.xml --project-name=WebGoat
-                    '''
-                }
+                docker run --rm \
+                  -v $PWD:/src \
+                  owasp/dependency-check:9.2.0 \
+                  --scan /src \
+                  --format HTML \
+                  --out /src/dependency-check-report
+                '''
             }
         }
 
+        stage('🔨 Build JAR') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
 
-                
-        stage('🐳 Docker Build & Tag') {
+        stage('🐳 Docker Build') {
             steps {
                 sh '''
                 docker build -t $ECR_REPO:$IMAGE_TAG .
@@ -58,18 +49,6 @@ pipeline {
             }
         }
 
-        stage('🔍 Snyk Image Scan (Docker CLI)') {
-            steps {
-                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-                    sh '''
-                    docker run --rm \
-                      -e SNYK_TOKEN=$SNYK_TOKEN \
-                      snyk/snyk-cli:docker test $ECR_REPO:$IMAGE_TAG
-                    '''
-                }
-            }
-        }
-        
         stage('🔐 ECR Login') {
             steps {
                 withAWS(credentials: 'aws-ecr-credentials', region: "${REGION}") {
@@ -158,6 +137,16 @@ Resources:
                   --s3-location bucket=$S3_BUCKET,bundleType=zip,key=$BUNDLE \
                   --region $REGION
                 '''
+            }
+        }
+
+        stage('📑 Publish Dependency Report') {
+            steps {
+                publishHTML([
+                    reportDir: 'dependency-check-report',
+                    reportFiles: 'dependency-check-report.html',
+                    reportName: 'Dependency Check Report'
+                ])
             }
         }
     }
