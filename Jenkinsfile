@@ -24,14 +24,17 @@ pipeline {
             steps {
                 sh '''
                 mkdir -p dependency-check-report
-
+        
                 docker run --rm \
                   -v $PWD:/src \
                   owasp/dependency-check:latest \
                   --scan /src \
                   --format HTML \
-                  --out /src/dependency-check-report
-                  --exclude .mvn --exclude .git --exclude target --disableCentral
+                  --out /src/dependency-check-report \
+                  --exclude .mvn \
+                  --exclude .git \
+                  --exclude target \
+                  --disableCentral
                 '''
             }
         }
