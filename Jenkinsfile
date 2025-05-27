@@ -32,18 +32,45 @@ pipeline {
             }
         
 
-     stage('🔍 Dependency Check') {
-    steps {
-        sh '''
-            echo "[🔍 Dependency Check 실행 시작]"
-            docker run --rm -u 1000:1000 \
-              -e NVD_API_KEY=$NVD_API_KEY \
-              -v $WORKSPACE:/src \
-              owasp/dependency-check:latest \
-              bash -c "dependency-check.sh --scan /src/main/java --format HTML --out /src/dependency-check-report --project WebGoat --prettyPrint --disableCentral --log level debug"
-        '''
+        stage('📁 main/java 디렉토리 수동 생성') {
+        steps {
+            sh '''
+                echo "[📁 /src/main/java 수동 생성 시작]"
+                mkdir -p $WORKSPACE/src/main/java
+    
+                echo "// Dummy Java file for Dependency-Check" > $WORKSPACE/src/main/java/Dummy.java
+    
+                echo "[✅ /src/main/java 생성 완료]"
+            '''
+        }
     }
-}
+    
+    stage('🔍 Dependency Check 실행') {
+        steps {
+            sh '''
+                echo "[🔍 Dependency Check 실행 시작]"
+    
+                docker run --rm -u $(id -u):$(id -g) \
+                  -e NVD_API_KEY=$NVD_API_KEY \
+                  -v $WORKSPACE:/src \
+                  owasp/dependency-check:latest \
+                  bash -c '
+                    echo "[📁 /src/main/java 확인]"
+                    ls -al /src/main/java || { echo "[❌ /src/main/java 없음]"; exit 1; }
+    
+                    echo "[🚀 dependency-check.sh 실행]"
+                    dependency-check.sh \
+                      --scan /src/main/java \
+                      --format HTML \
+                      --out /src/dependency-check-report \
+                      --project WebGoat \
+                      --prettyPrint \
+                      --log level debug
+                  '
+            '''
+        }
+    }
+
 
         
         stage('🧪 경로 점검: /src/main/java 존재 확인') {
