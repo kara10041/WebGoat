@@ -2,99 +2,66 @@ pipeline {
     agent any
 
     environment {
-        ECR_REPO = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/ecr-webgoat" 
+        // ECR 정보
+        AWS_REGION = "ap-northeast-2"
+        ECR_REPO = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/ecr-webgoat"
         IMAGE_TAG = "latest"
-        JAVA_HOME = "/usr/lib/jvm/java-17-amazon-corretto.x86_64"
-        PATH = "${env.JAVA_HOME}/bin:${env.PATH}"
-        S3_BUCKET = "webgoat-bucket0225"
-        DEPLOY_APP = "webgoat-app2"
-        DEPLOY_GROUP = "webgoat-bluegreen"
-        REGION = "ap-northeast-2"
-        BUNDLE = "webgoat-deploy-bundle.zip"
-        NVD_API_KEY = credentials('nvd-api-key')
+
+        // Dependency-Track 정보
+        DEP_TRACK_URL = "http://43.203.218.149:8081/api/v1/bom"
+        DEP_TRACK_PROJECT_ID = "2acd1e75-76d1-459d-a9d9-ac1df1a7b750"
     }
 
     stages {
-        stage('💼 Checkout') {
+        stage('📦 Checkout') {
             steps {
-                checkout scm
+                git url: 'https://github.com/kara10041/WebGoat.git', branch: 'main', credentialsId: 'github-credentials'
             }
         }
 
-        stage('🧪 Install Dependency-Check (if needed)') {
+        stage('🧾 Generate SBOM (Syft)') {
             steps {
-                echo "🌐 Dependency-Check 설치 확인 및 다운로드 중..."
                 sh '''
-                    if [ ! -f dependency-check/bin/dependency-check.sh ]; then
-                        echo "🔽 dependency-check.sh 없음 → 다운로드 시작"
-                        curl -L -o dc.zip https://github.com/jeremylong/DependencyCheck/releases/download/v8.4.0/dependency-check-8.4.0-release.zip
-                        unzip -q dc.zip
-                        rm dc.zip
-                        mv dependency-check* dependency-check
-                        echo "✅ Dependency-Check 설치 완료"
-                    else
-                        echo "✅ 이미 dependency-check.sh 존재함 → 설치 삭제"
-                    fi
+                which syft || curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+                syft packages . -o cyclonedx-json > sbom.json
+                ls -lh sbom.json
                 '''
             }
         }
 
-
-                    stage('🔍 Dependency Check (안전 실행)') {
-                        steps {
-                            writeFile file: 'run-depcheck.sh', text: '''#!/bin/bash
-                    set -e
-                    
-                    echo "[📂 실제 Java 소스 파일 개수 확인]"
-                    JAVA_COUNT=$(find ./src/main/java -type f -name "*.java" | wc -l)
-                    echo "[ℹ️ 총 Java 파일 개수: $JAVA_COUNT]"
-                    
-                    if [ "$JAVA_COUNT" -eq 0 ]; then
-                      echo "[⚠️ 경고: 분석할 .java 파일이 없습니다. Dependency-Check 실행 스킵]"
-                      exit 0
-                    fi
-                    
-                    echo "[✅ 파일 존재 확인 완료 - Dependency Check 실행 시작]"
-                    mkdir -p ./dependency-check-report
-                    
-                    ./dependency-check/bin/dependency-check.sh \
-                      --project WebGoat \
-                      --scan ./src/main/java \
-                      --format HTML \
-                      --out ./dependency-check-report \
-                      --prettyPrint \
-                      --disableAssembly \
-                      --failOnCVSS 7
-                    '''
-                    
-                            sh 'chmod +x run-depcheck.sh'
-                            sh './run-depcheck.sh'
-                        }
-                    }
-
-
-        stage('📄 Publish Dependency Report') {
+        stage('🐳 Docker Build & Push to ECR') {
             steps {
-                publishHTML([
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: 'dependency-check-report',
-                    reportFiles: 'dependency-check-report.html',
-                    reportName: 'Dependency Check Report'
-                ])
+                withAWS(region: "${AWS_REGION}", credentials: 'aws-ecr-credentials') {
+                    sh """
+                        aws ecr get-login-password --region $AWS_REGION | \
+                        docker login --username AWS --password-stdin $ECR_REPO
+
+                        docker build -t $ECR_REPO:$IMAGE_TAG .
+                        docker push $ECR_REPO:$IMAGE_TAG
+                    """
+                }
             }
         }
 
-        // 이후 기존 Docker 빌드 및 배포 스테이지 유지
-    }
+        stage('📤 Upload SBOM to Dependency-Track') {
+            steps {
+                withCredentials([string(credentialsId: 'dependency-track-api-key', variable: 'DT_API_KEY')]) {
+                    sh '''
+                    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+                      -H "X-Api-Key: $DT_API_KEY" \
+                      -F "project=${DEP_TRACK_PROJECT_ID}" \
+                      -F "bom=@sbom.json" \
+                      ${DEP_TRACK_URL})
 
-    post {
-        success {
-            echo "✅ Successfully built, scanned, pushed, and deployed!"
-        }
-        failure {
-            echo "❌ Build or deployment failed. Check logs!"
+                    if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "202" ]; then
+                      echo "✅ SBOM successfully uploaded (HTTP $HTTP_CODE)"
+                    else
+                      echo "❌ Failed to upload SBOM (HTTP $HTTP_CODE)"
+                      exit 1
+                    fi
+                    '''
+                }
+            }
         }
     }
 }
