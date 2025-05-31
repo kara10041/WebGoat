@@ -1,7 +1,7 @@
 pipeline {
     agent any
 
-        environment {
+    environment {
         ECR_REPO = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/trivy-test"
         IMAGE_TAG = "latest"
         REGION = "ap-northeast-2"
@@ -10,7 +10,6 @@ pipeline {
         RESPONSE_FILE = "lambda-response.json"
         REPO_URL = "https://github.com/kara10041/WebGoat.git"
     }
-    
 
     stages {
         stage('📦 Checkout') {
@@ -56,7 +55,8 @@ pipeline {
                     {
                         "image": "${ECR_REPO}:${IMAGE_TAG}",
                         "repo": "${REPO_URL}",
-                        "scan_id": "${scanId}"
+                        "scan_id": "${scanId}",
+                        "generate_sbom": true
                     }
                     """.stripIndent().trim()
 
