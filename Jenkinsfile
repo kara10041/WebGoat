@@ -25,6 +25,7 @@ pipeline {
         '''
       }
     }
+  } 
 
   post {
     success {
@@ -34,5 +35,4 @@ pipeline {
       echo "❌ 파이프라인 실패! 로그 확인 필요"
     }
   }
-}
 }
