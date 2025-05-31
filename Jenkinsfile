@@ -17,21 +17,14 @@ pipeline {
       }
     }
 
-    stage('🚀 Run Trivy Deployment Script') {
+    stage('📤 Upload Trivy Scan Request') {
       steps {
         sh '''
-          chmod +x scripts/trivy-deploy.sh
-          bash scripts/trivy-deploy.sh \
-            "$ECR_REPO" \
-            "$IMAGE_TAG" \
-            "$REPO_URL" \
-            "$REGION" \
-            "$FUNCTION_NAME" \
-            "$SCAN_ID"
+          chmod +x scripts/trivy-scan-request.sh
+          ./scripts/trivy-scan-request.sh
         '''
       }
     }
-  }
 
   post {
     success {
