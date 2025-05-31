@@ -1,67 +1,95 @@
 pipeline {
     agent any
 
-    environment {
-        // ECR 정보
-        AWS_REGION = "ap-northeast-2"
-        ECR_REPO = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/ecr-webgoat"
+        environment {
+        ECR_REPO = "521199095756.dkr.ecr.ap-northeast-2.amazonaws.com/trivy-test"
         IMAGE_TAG = "latest"
-
-        // Dependency-Track 정보
-        DEP_TRACK_URL = "http://43.203.218.149:8081/api/v1/bom"
-        DEP_TRACK_PROJECT_ID = "2acd1e75-76d1-459d-a9d9-ac1df1a7b750"
+        REGION = "ap-northeast-2"
+        FUNCTION_NAME = "trivy-ssm-lambda"
+        PAYLOAD_FILE = "lambda-payload.json"
+        RESPONSE_FILE = "lambda-response.json"
+        REPO_URL = "https://github.com/kara10041/WebGoat.git"
     }
+    
 
     stages {
         stage('📦 Checkout') {
             steps {
-                git url: 'https://github.com/kara10041/WebGoat.git', branch: 'main', credentialsId: 'github-credentials'
+                checkout scm
             }
         }
 
-        stage('🧾 Generate SBOM (Syft)') {
+        stage('🔨 Build JAR') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('🐳 Docker Build') {
             steps {
                 sh '''
-                which syft || curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-                syft packages . -o cyclonedx-json > sbom.json
-                ls -lh sbom.json
+                docker build -t $ECR_REPO:$IMAGE_TAG .
                 '''
             }
         }
 
-        stage('🐳 Docker Build & Push to ECR') {
+        stage('🔐 ECR Login') {
             steps {
-                withAWS(region: "${AWS_REGION}", credentials: 'aws-ecr-credentials') {
-                    sh """
-                        aws ecr get-login-password --region $AWS_REGION | \
-                        docker login --username AWS --password-stdin $ECR_REPO
-
-                        docker build -t $ECR_REPO:$IMAGE_TAG .
-                        docker push $ECR_REPO:$IMAGE_TAG
-                    """
-                }
+                sh '''
+                aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ECR_REPO
+                '''
             }
         }
 
-        stage('📤 Upload SBOM to Dependency-Track') {
+        stage('🚀 Push to ECR') {
             steps {
-                withCredentials([string(credentialsId: 'dependency-track-api-key', variable: 'DT_API_KEY')]) {
-                    sh '''
-                    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-                      -H "X-Api-Key: $DT_API_KEY" \
-                      -F "project=${DEP_TRACK_PROJECT_ID}" \
-                      -F "bom=@sbom.json" \
-                      ${DEP_TRACK_URL})
+                sh 'docker push $ECR_REPO:$IMAGE_TAG'
+            }
+        }
 
-                    if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "202" ]; then
-                      echo "✅ SBOM successfully uploaded (HTTP $HTTP_CODE)"
-                    else
-                      echo "❌ Failed to upload SBOM (HTTP $HTTP_CODE)"
-                      exit 1
-                    fi
-                    '''
+        stage('📡 Trigger Trivy Lambda') {
+            steps {
+                script {
+                    def scanId = "build-${env.BUILD_NUMBER}"
+
+                    writeFile file: "${PAYLOAD_FILE}", text: """
+                    {
+                        "image": "${ECR_REPO}:${IMAGE_TAG}",
+                        "repo": "${REPO_URL}",
+                        "scan_id": "${scanId}"
+                    }
+                    """.stripIndent().trim()
+
+                    echo '▶️ Lambda 함수 호출 중...'
+
+                    def result = sh(
+                        script: """
+                            aws lambda invoke \
+                              --function-name ${FUNCTION_NAME} \
+                              --region ${REGION} \
+                              --cli-binary-format raw-in-base64-out \
+                              --payload file://${PAYLOAD_FILE} \
+                              ${RESPONSE_FILE}
+                        """,
+                        returnStatus: true
+                    )
+
+                    if (result != 0) {
+                        error("❌ Lambda 호출 실패! 종료 코드: ${result}")
+                    } else {
+                        echo "✅ Lambda 호출 성공!"
+                    }
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "🎉 전체 빌드 및 Trivy Lambda 호출 성공!"
+        }
+        failure {
+            echo "❌ 빌드 실패! 로그 확인 필요"
         }
     }
 }
