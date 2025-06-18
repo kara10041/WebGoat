@@ -21,7 +21,7 @@ pipeline {
 
     stage('SBOM Scan & Upload') {
       steps {
-        sshagent(['YOUR_SSH_CREDENTIALS_ID']) {
+        sshagent(['sbom_analysis_ssh']) {
           sh """
             ssh -o StrictHostKeyChecking=no ec2-user@13.125.155.126'
               /home/scan/scan_and_upload.sh \
