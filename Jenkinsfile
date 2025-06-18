@@ -22,20 +22,17 @@ pipeline {
     stage('SBOM Scan & Upload') {
       steps {
         sshagent(['sbom_analysis_ssh']) {
-          sh """
-            ssh -o StrictHostKeyChecking=no ec2-user@13.125.155.126'
-              /home/scan/scan_and_upload.sh \
-                "${REPO_URL}" \
-                "${DTRACK_URL}" \
-                "${DTRACK_UUID}" \
-                "${DTRACK_APIKEY}"
-            '
-          """
+          sh '''
+            ssh -o StrictHostKeyChecking=no ec2-user@13.125.155.126 "/home/scan/scan_and_upload.sh \
+              \\"${REPO_URL}\\" \
+              \\"${DTRACK_URL}\\" \
+              \\"${DTRACK_UUID}\\" \
+              \\"${DTRACK_APIKEY}\\""
+          '''
         }
       }
     }
-  }
-
+      
   post {
     success {
       echo "🎉 전체 빌드 및 SBOM 업로드까지 완료!"
