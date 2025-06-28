@@ -18,19 +18,23 @@ pipeline {
 
     stage('🤖 Java 버전 추출') {
       steps {
-        sh 'python3 components/scripts/pom_to_docker_image.py > java_version.txt'
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'bedrock-credential-id']]) {
+          sh 'python3 components/scripts/pom_to_docker_image.py > java_version.txt'
+        }
       }
     }
 
     stage('🪄 도커 이미지 추천') {
       steps {
-        script {
-          def javaVersion = readFile('java_version.txt').trim()
-          env.JAVA_VERSION = javaVersion
-        }
-        sh 'python3 components/scripts/bedrock_docker_recommend.py > docker_image.txt'
-        script {
-          env.DOCKER_IMAGE = readFile('docker_image.txt').trim()
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'bedrock-credential-id']]) {
+          script {
+            def javaVersion = readFile('java_version.txt').trim()
+            env.JAVA_VERSION = javaVersion
+          }
+          sh 'python3 components/scripts/bedrock_docker_recommend.py > docker_image.txt'
+          script {
+            env.DOCKER_IMAGE = readFile('docker_image.txt').trim()
+          }
         }
       }
     }
