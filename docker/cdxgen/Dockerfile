@@ -1,5 +1,5 @@
 FROM amazonlinux:2023
-RUN dnf install -y git && dnf clean all
+RUN dnf install -y git wget && dnf clean all
 RUN curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - && dnf install -y nodejs
 
 # JDK 바이너리 다운로드 
