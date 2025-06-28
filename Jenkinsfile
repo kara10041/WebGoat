@@ -18,7 +18,7 @@ pipeline {
 
     stage('🤖 Java 버전 추출') {
       steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'bedrock-credential-id']]) {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'bedrock-aws-key']]) {
           sh 'python3 components/scripts/pom_to_docker_image.py > java_version.txt'
         }
       }
