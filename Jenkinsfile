@@ -16,28 +16,21 @@ pipeline {
       }
     }
 
-    stage('🤖 Java 버전 추출') {
+    stage('🤖 Java 버전 및 도커 이미지 추천') {
       steps {
         withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'bedrock-aws-key']]) {
           sh 'python3 ./components/scripts/pom_to_docker_image.py ./pom.xml > output.txt'
+          script {
+            def lines = readFile('output.txt').split('\n')
+            env.JAVA_VERSION = lines[0].trim()
+            env.DOCKER_IMAGE = lines[1].trim()
+            echo "Java Version: ${env.JAVA_VERSION}"
+            echo "Docker Image: ${env.DOCKER_IMAGE}"
+          }
         }
       }
     }
 
-    stage('🪄 도커 이미지 추천') {
-      steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'bedrock-aws-key']]) {
-          script {
-            def javaVersion = readFile('java_version.txt').trim()
-            env.JAVA_VERSION = javaVersion
-          }
-          sh 'python3 ./components/scripts/pom_to_docker_image.py ./pom.xml > docker_image.txt'
-          script {
-            env.DOCKER_IMAGE = readFile('docker_image.txt').trim()
-          }
-        }
-      }
-    }
 
     stage('📑 SBOM 생성 & 업로드') {
       steps {
