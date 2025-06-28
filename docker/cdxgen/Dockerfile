@@ -1,15 +1,11 @@
-FROM amazonlinux:2023   
-
-# OpenJDK 17, git만 설치 (curl 설치 제외)
-RUN dnf install -y java-17-amazon-corretto git && dnf clean all
-
-
-RUN curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - \
-    && dnf install -y nodejs
-
-
+FROM amazonlinux:2023
+RUN dnf install -y git curl && dnf clean all
+RUN curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - && dnf install -y nodejs
+COPY jdk-17.tar.gz /opt/
+COPY jdk-21.tar.gz /opt/
+COPY jdk-23.tar.gz /opt/
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 RUN npm install -g @cyclonedx/cdxgen
-
 WORKDIR /app
-
-ENTRYPOINT ["cdxgen"]
+ENTRYPOINT ["/entrypoint.sh"]
