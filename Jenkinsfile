@@ -26,7 +26,7 @@ pipeline {
 
     stage('🪄 도커 이미지 추천') {
       steps {
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'bedrock-credential-id']]) {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'bedrock-aws-key']]) {
           script {
             def javaVersion = readFile('java_version.txt').trim()
             env.JAVA_VERSION = javaVersion
