@@ -28,10 +28,15 @@ pipeline {
           sh 'python3 ./components/scripts/pom_to_docker_image.py ./pom.xml > output.txt'
           script {
             def lines = readFile('output.txt').split("\n")
-            env.JAVA_VERSION = lines[0].trim()
-            env.DOCKER_IMAGE = lines[1].trim()
-            echo "Java Version: ${env.JAVA_VERSION}"
-            echo "Docker Image: ${env.DOCKER_IMAGE}"
+            echo "output.txt lines: ${lines}"
+            if (lines.size() > 1) {
+              env.JAVA_VERSION = lines[0].trim()
+              env.DOCKER_IMAGE = lines[1].trim()
+              echo "Java Version: ${env.JAVA_VERSION}"
+              echo "Docker Image: ${env.DOCKER_IMAGE}"
+            } else {
+              error "output.txt 라인수 부족 (lines.size=${lines.size()}): ${lines}"
+            }
           }
         }
       }
