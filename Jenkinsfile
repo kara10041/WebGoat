@@ -4,8 +4,8 @@ pipeline {
   environment {
     REGION = "ap-northeast-2"
     REPO_URL = "https://github.com/WebGoat/WebGoat.git"
-    DTRACK_URL = "http://172.31.39.159:8080"
-    DTRACK_APIKEY = "odt_3lLEAJkO_hI2Ywy5gM2NvhTLNwi8aOTupPKpaV45o"
+    DTRACK_URL = "http://172.31.4.194:8081"
+    DTRACK_APIKEY = "odt_S7E3bsCU_FRvF9D0e5Iq7JSGDfbzwIVPLOp7ieZzt"
   }
 
   stages {
