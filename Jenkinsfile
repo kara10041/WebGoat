@@ -36,7 +36,7 @@ pipeline {
     stage('SBOM 생성&업로드') {
       steps {
         script {
-          sh "bash components/scripts/run_cdxgen.sh ${env.IMAGE_TAG}"
+          sh "bash components/scripts/run_cdxgen_test.sh ${env.IMAGE_TAG}"
           sh "./components/scripts/upload_to_dtrack.sh ${env.DTRACK_URL} ${env.DTRACK_UUID} ${env.DTRACK_APIKEY} sbom.json"
         }
       }
