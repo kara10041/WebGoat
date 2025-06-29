@@ -20,7 +20,7 @@ pipeline {
       steps {
         script {
           env.JAVA_VERSION = sh(
-            script: "python3 components/scripts/pom_to_docker_image.py",
+            script: "python3 components/scripts/pom_to_docker_image.py pom.xml",
             returnStdout: true
           ).trim()
           env.IMAGE_TAG = sh(
