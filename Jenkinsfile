@@ -16,31 +16,30 @@ pipeline {
       }
     }
 
-     stage('도커 이미지 태그 결정') {
-        steps {
-            script {
-                env.JAVA_VERSION = sh(
-                    script: "python3 components/scripts/pom_to_docker_image.py",
-                    returnStdout: true
-                ).trim()
-                env.IMAGE_TAG = sh(
-                    script: "python3 components/scripts/docker_tag.py ${env.JAVA_VERSION}",
-                    returnStdout: true
-                ).trim()
-            }
+    stage('도커 이미지 태그 결정') {
+      steps {
+        script {
+          env.JAVA_VERSION = sh(
+            script: "python3 components/scripts/pom_to_docker_image.py",
+            returnStdout: true
+          ).trim()
+          env.IMAGE_TAG = sh(
+            script: "python3 components/scripts/docker_tag.py ${env.JAVA_VERSION}",
+            returnStdout: true
+          ).trim()
         }
+      }
     }
-    
+
     stage('SBOM 생성&업로드') {
-        steps {
-            script {
-                sh "bash components/scripts/run_cdxgen.sh ${env.IMAGE_TAG}"
-                sh "./components/scripts/upload_to_dtrack.sh ${env.DTRACK_URL} ${env.DTRACK_UUID} ${env.DTRACK_APIKEY} sbom.json"
-            }
+      steps {
+        script {
+          sh "bash components/scripts/run_cdxgen.sh ${env.IMAGE_TAG}"
+          sh "./components/scripts/upload_to_dtrack.sh ${env.DTRACK_URL} ${env.DTRACK_UUID} ${env.DTRACK_APIKEY} sbom.json"
         }
+      }
     }
-
-
+  }
 
   post {
     success {
