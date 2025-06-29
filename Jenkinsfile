@@ -23,6 +23,8 @@ pipeline {
             script: "python3 components/scripts/pom_to_docker_image.py pom.xml",
             returnStdout: true
           ).trim()
+            echo "[+] 사용 자바 버전: ${env.JAVA_VERSION}"
+            
           env.IMAGE_TAG = sh(
             script: "python3 components/scripts/docker_tag.py ${env.JAVA_VERSION}",
             returnStdout: true
