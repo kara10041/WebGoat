@@ -1,5 +1,5 @@
 pipeline {
-  agent any
+  agent none   // 전체 agent는 지정하지 않고, stage별로 지정
 
   environment {
     REGION = "ap-northeast-2"
@@ -10,33 +10,31 @@ pipeline {
 
   stages {
     stage('📦 Checkout') {
+      agent any   // master or 아무 agent에서 체크아웃
       steps {
         checkout scm
       }
     }
 
-    stage('도커 이미지 태그 결정') {
+    stage('SCA 병렬 실행 (Throttle 적용)') {
+      agent { label 'SCA' }    // SCA label을 가진 slave에서 실행
       steps {
         script {
-          env.JAVA_VERSION = sh(
-            script: "python3 components/scripts/pom_to_docker_image_test.py pom.xml",
+          def targets = sh(
+            script: "ls -d */ | sed 's#/##'",
             returnStdout: true
-          ).trim()
-            echo "[+] 사용 자바 버전: ${env.JAVA_VERSION}"
-            
-          env.IMAGE_TAG = sh(
-            script: "python3 components/scripts/docker_tag.py ${env.JAVA_VERSION}",
-            returnStdout: true
-          ).trim()
-        }
-      }
-    }
+          ).trim().split('\n')
 
-    stage('SBOM 생성&업로드') {
-      steps {
-        script {
-          sh "bash components/scripts/run_cdxgen_test.sh ${env.IMAGE_TAG}"
-          sh "./components/scripts/upload_to_dtrack.sh ${env.DTRACK_URL} ${env.DTRACK_UUID} ${env.DTRACK_APIKEY} sbom.json"
+          def jobs = targets.collectEntries { target ->
+            ["${target}" : {
+              throttle(['sca-category']) {
+                stage("SCA for ${target}") {
+                  sh "/home/ec2-user/run_sbom_pipeline.sh '${target}'"
+                }
+              }
+            }]
+          }
+          parallel jobs
         }
       }
     }
