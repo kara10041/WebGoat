@@ -10,31 +10,33 @@ pipeline {
 
   stages {
     stage('📦 Checkout') {
-      agent any   // master or 아무 agent에서 체크아웃
+      agent any   // master 혹은 아무 agent에서 체크아웃
       steps {
         checkout scm
       }
     }
 
     stage('SCA 병렬 실행 (Throttle 적용)') {
-      agent { label 'SCA' }    // SCA label을 가진 slave에서 실행
+      agent { label 'SCA' }   // SCA 전용 agent(slave)에서 실행
       steps {
         script {
+          // 폴더(분석 대상) 자동 탐색 (최상위 디렉터리명 리스트업)
           def targets = sh(
             script: "ls -d */ | sed 's#/##'",
             returnStdout: true
           ).trim().split('\n')
 
+          // 병렬 작업 정의 + throttle 플러그인 적용
           def jobs = targets.collectEntries { target ->
             ["${target}" : {
-              throttle(['sca-category']) {
+              throttle(['sca-category']) {   // Throttle 카테고리명(사전에 설정 필요)
                 stage("SCA for ${target}") {
                   sh "/home/ec2-user/run_sbom_pipeline.sh '${target}'"
                 }
               }
             }]
           }
-          parallel jobs
+          parallel jobs    // 병렬 실행, throttle로 동시 개수 제한
         }
       }
     }
