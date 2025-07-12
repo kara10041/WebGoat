@@ -1,7 +1,7 @@
 pipeline {
     agent any
 
-       environment {
+    environment {
         BUILD_ID = "${env.BUILD_NUMBER}"
         AWS_REGION = 'ap-northeast-2'
         ECR_REPO = 'test/test-api'
@@ -32,12 +32,13 @@ pipeline {
                     def repoUrl = 'https://github.com/kara10041/WebGoat.git'
                     def repoName = 'WebGoat'
                     def buildId = env.BUILD_NUMBER
+                    def logFile = "/home/ec2-user/logs/sbom_${buildId}.log"
 
-                    // 백그라운드 실행
+                    // 백그라운드 실행 (nohup + 로그 기록)
                     sh """
-                        setsid /home/ec2-user/run_sbom_pipeline.sh '${repoUrl}' '${repoName}' '${buildId}' > /dev/null 2>&1 &
+                        nohup /home/ec2-user/run_sbom_pipeline.sh '${repoUrl}' '${repoName}' '${buildId}' > '${logFile}' 2>&1 || echo '[❌] SCA 실행 실패' >> /home/ec2-user/logs/debug.log &
                     """
-                    echo '✅ SCA 백그라운드 실행됨!'
+                    echo "✅ SCA 백그라운드 실행됨! 로그: ${logFile}"
                 }
             }
         }
