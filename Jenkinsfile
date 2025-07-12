@@ -1,7 +1,8 @@
 pipeline {
     agent any
 
-    environment {
+       environment {
+        BUILD_ID = "${env.BUILD_NUMBER}"
         AWS_REGION = 'ap-northeast-2'
         ECR_REPO = 'test/test-api'
         IMAGE_TAG = "${env.BUILD_ID}" 
@@ -11,78 +12,47 @@ pipeline {
     }
 
     stages {
-        stage('Clone from GitHub') {
+        stage('🌱 Dummy: Git Checkout') {
             steps {
-                git branch: 'develop', credentialsId: 'github-credentials', url: 'https://github.com/kara10041/WebGoat.git'
+                echo '📁 Git 클론 더미 처리 중...'
+                sh 'sleep 1'
             }
         }
 
-  
-        stage('Build Docker Image') {
+        stage('🧪 Dummy: Build') {
             steps {
-                sh 'docker build -t webgoat-image . '
-                sh 'docker tag webgoat-image ${ECR_URI}:${IMAGE_TAG}'
+                echo '🔨 빌드 더미 처리 중...'
+                sh 'sleep 1'
             }
         }
 
-        stage('Login to ECR') {
+        stage('🚀 Background SCA (SBOM)') {
             steps {
-                withCredentials([[ 
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-ecr-credentials'
-                ]]) {
-                    sh 'aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URI'
+                script {
+                    def repoUrl = 'https://github.com/sujiiiin/WebGoat.git'
+                    def repoName = 'WebGoat'
+                    def buildId = env.BUILD_NUMBER
+
+                    // 백그라운드 실행
+                    sh """
+                        setsid /home/ec2-user/run_sbom_pipeline.sh '${repoUrl}' '${repoName}' '${buildId}' > /dev/null 2>&1 &
+                    """
+                    echo '✅ SCA 백그라운드 실행됨!'
                 }
             }
         }
 
-        stage('Push to ECR') {
+        stage('🎯 Dummy: Deploy') {
             steps {
-                sh 'docker push ${ECR_URI}:${IMAGE_TAG}'
+                echo '🚀 배포 더미 처리 중...'
+                sh 'sleep 1'
             }
         }
+    }
 
-        stage('Deploy to ECS via CodeDeploy') {
-            steps {
-                withCredentials([[ 
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-ecr-credentials'
-                ]]) {
-                    script {
-                        def appspecContent = '''\
-        version: 1
-        Resources:
-          - TargetService:
-              Type: AWS::ECS::Service
-              Properties:
-                TaskDefinition: webgoat-task1
-                LoadBalancerInfo:
-                  ContainerName: webgoat
-                  ContainerPort: 8080
-                PlatformVersion: "LATEST"
-        '''
-                        writeFile file: 'appspec.yaml', text: appspecContent
-                    }
-
-                    sh '''
-        echo "==== appspec.yaml 출력 ===="
-        cat appspec.yaml
-        echo "==========================="
-        '''
-
-                    sh 'aws s3 cp appspec.yaml s3://webgoat-codedeploy-bucket/appspec.yaml'
-
-                    sh '''
-        aws deploy create-deployment \
-          --application-name webgoat-codedeploy \
-          --deployment-group-name webgoat-deploy-group \
-          --deployment-config-name CodeDeployDefault.ECSAllAtOnce \
-          --region ap-northeast-2 \
-          --revision "revisionType=S3,s3Location={bucket=webgoat-codedeploy-bucket,key=appspec.yaml,bundleType=YAML}"
-        '''
-                }
-            }
+    post {
+        always {
+            echo "🎉 파이프라인 종료"
         }
-
     }
 }
