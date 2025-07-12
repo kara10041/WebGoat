@@ -29,7 +29,7 @@ pipeline {
         stage('🚀 Background SCA (SBOM)') {
             steps {
                 script {
-                    def repoUrl = 'https://github.com/sujiiiin/WebGoat.git'
+                    def repoUrl = 'https://github.com/kara10041/WebGoat.git'
                     def repoName = 'WebGoat'
                     def buildId = env.BUILD_NUMBER
 
