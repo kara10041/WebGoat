@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        REPO_URL = 'https://github.com/your-org/your-repo.git'  // 🔁 실 repo 주소로 수정
+        REPO_URL = 'https://github.com/kara10041/WebGoat.git'  
         BRANCH = 'main'
         GIT_PREVIOUS_COMMIT = "${env.GIT_PREVIOUS_COMMIT ?: 'HEAD~1'}"
         GIT_COMMIT = "${env.GIT_COMMIT ?: 'HEAD'}"
