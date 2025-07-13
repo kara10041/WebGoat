@@ -2,58 +2,56 @@ pipeline {
     agent any
 
     environment {
-        BUILD_ID = "${env.BUILD_NUMBER}"
-        AWS_REGION = 'ap-northeast-2'
-        ECR_REPO = 'test/test-api'
-        IMAGE_TAG = "${env.BUILD_ID}" 
-        ACCOUNT_ID = "521199095756"
-        ECR_BASE_URI = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-        ECR_URI = "${ECR_BASE_URI}/${ECR_REPO}"
+        REPO_URL = 'https://github.com/kara10041/WebGoat.git'
+        REPO_NAME = 'WebGoat'
     }
 
     stages {
-        stage('🌱 Dummy: Git Checkout') {
+        stage('📦 Dummy Build') {
             steps {
-                echo '📁 Git 클론 더미 처리 중...'
-                sh 'sleep 1'
+                echo '🔧 빌드 단계 진행 중...'
+                sh 'sleep 2'
             }
         }
 
-        stage('🧪 Dummy: Build') {
+        stage('🔍 Dummy Test') {
             steps {
-                echo '🔨 빌드 더미 처리 중...'
-                sh 'sleep 1'
+                echo '🧪 테스트 단계 진행 중...'
+                sh 'sleep 2'
             }
         }
 
         stage('🚀 Background SCA (SBOM)') {
             steps {
                 script {
-                    def repoUrl = 'https://github.com/kara10041/WebGoat.git'
-                    def repoName = 'WebGoat'
                     def buildId = env.BUILD_NUMBER
                     def logFile = "/home/ec2-user/logs/sbom_${buildId}.log"
 
-                    // 백그라운드 실행 (nohup + 로그 기록)
                     sh """
-                        nohup /home/ec2-user/run_sbom_pipeline.sh '${repoUrl}' '${repoName}' '${buildId}' > '${logFile}' 2>&1 || echo '[❌] SCA 실행 실패' >> /home/ec2-user/logs/debug.log &
+                        chmod +x /home/ec2-user/run_sbom_pipeline.sh
+                        chmod -R u+rwX /tmp/${REPO_NAME} || true
+                        nohup /home/ec2-user/run_sbom_pipeline.sh '${REPO_URL}' '${REPO_NAME}' '${buildId}' > '${logFile}' 2>&1 || echo '[❌] SCA 실행 실패' >> /home/ec2-user/logs/debug.log &
                     """
-                    echo "✅ SCA 백그라운드 실행됨! 로그: ${logFile}"
+
+                    echo "✅ SCA 백그라운드 실행됨! 로그 경로: ${logFile}"
                 }
             }
         }
 
-        stage('🎯 Dummy: Deploy') {
+        stage('🗃️ Dummy Archive') {
             steps {
-                echo '🚀 배포 더미 처리 중...'
+                echo '📁 아티팩트 저장 중...'
                 sh 'sleep 1'
             }
         }
     }
 
     post {
-        always {
-            echo "🎉 파이프라인 종료"
+        success {
+            echo '🎉 파이프라인 완료!'
+        }
+        failure {
+            echo '💥 실패: 로그 확인 필요'
         }
     }
 }
